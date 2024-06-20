@@ -17,13 +17,13 @@ const envsSchema = joi
     // PRODUCTS_MICROSERVICE_PORT: joi.number().required(),
     // ORDERS_MICROSERVICE_HOST: joi.string().required(),
     // ORDERS_MICROSERVICE_PORT: joi.number().required(),
-    NATS_SERVERS: joi.array().items(joi.string()).required(),
+    NATS_SERVERS: joi.array().items(joi.string())?.required(),
   })
   .unknown(true);
 
 const { error, value } = envsSchema.validate({
   ...process.env,
-  NATS_SERVERS: process.env.NATS_SERVERS.split(',').map((server) =>
+  NATS_SERVERS: process.env.NATS_SERVERS?.split(',').map((server) =>
     server.trim(),
   ),
 });

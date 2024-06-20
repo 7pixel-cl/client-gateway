@@ -5,48 +5,53 @@ import {
   Body,
   Param,
   Inject,
-  Query,
   ParseUUIDPipe,
+  Query,
   Patch,
 } from '@nestjs/common';
+
 import { NATS_SERVICE } from 'src/config';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
+import { CreateOrderDto, OrderPaginationDto, StatusDto } from './dto';
 import { firstValueFrom } from 'rxjs';
-import { CreateOrderDto, OrderPaginationDto } from './dto';
 import { PaginationDto } from 'src/common';
-import { StatusDto } from './dto/status.dto';
 
 @Controller('orders')
 export class OrdersController {
   constructor(@Inject(NATS_SERVICE) private readonly client: ClientProxy) {}
 
   @Post()
-  createOrder(@Body() createOrderDto: CreateOrderDto) {
+  create(@Body() createOrderDto: CreateOrderDto) {
     return this.client.send('createOrder', createOrderDto);
   }
 
   @Get()
-  getAllOrders(@Query() orderPaginationDto: OrderPaginationDto) {
-    return this.client.send('findAllOrders', orderPaginationDto);
+  async findAll(@Query() orderPaginationDto: OrderPaginationDto) {
+    try {
+      const orders = await firstValueFrom(
+        this.client.send('findAllOrders', orderPaginationDto),
+      );
+      return orders;
+    } catch (error) {
+      throw new RpcException(error);
+    }
   }
 
   @Get('id/:id')
-  async getOrder(@Param('id', ParseUUIDPipe) id: string) {
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
     try {
       const order = await firstValueFrom(
         this.client.send('findOneOrder', { id }),
       );
-      if (!order) {
-        throw new RpcException('Order not found');
-      }
+
+      return order;
     } catch (error) {
       throw new RpcException(error);
     }
-    return this.client.send('findOneOrder', { id });
   }
 
   @Get(':status')
-  async getOrderByStatus(
+  async findAllByStatus(
     @Param() statusDto: StatusDto,
     @Query() paginationDto: PaginationDto,
   ) {
@@ -61,7 +66,7 @@ export class OrdersController {
   }
 
   @Patch(':id')
-  updateOrderStatus(
+  changeStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() statusDto: StatusDto,
   ) {
